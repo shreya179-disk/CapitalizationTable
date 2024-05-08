@@ -1,0 +1,12 @@
+{
+  "name": "hardhat-project",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.2"
+  },
+  "dependencies": {
+    "fhevm": "^0.3.0",
+    "fhevm-contracts": "github:zama-ai/fhevm-contracts",
+    "openzeppelin-solidity": "github:OpenZeppelin/openzeppelin-contracts"
+  }
+}
