@@ -127,12 +127,12 @@ contract CapTableData is EIP712 {
         onlySignedPublicKeyEmp(publicKey, signature, key, caller)
         returns (bytes memory)
     {
-        IEncryptedCapTable.EmployeeDetails memory employe = getEmployee(
+        IEncryptedCapTable.EmployeeDetails memory employee = getEmployee(
             key,
             caller
         );
         bytes memory details = TFHE.reencrypt(
-            employe.totalAllocation,
+            employee.totalAllocation,
             publicKey,
             0
         );
@@ -151,12 +151,12 @@ contract CapTableData is EIP712 {
         onlySignedPublicKeyEmp(publicKey, signature, key, caller)
         returns (bytes memory)
     {
-        IEncryptedCapTable.EmployeeDetails memory employe = getEmployee(
+        IEncryptedCapTable.EmployeeDetails memory employee = getEmployee(
             key,
             caller
         );
         bytes memory details = TFHE.reencrypt(
-            employe.lastClaimed,
+            employee.lastClaimed,
             publicKey,
             0
         );
@@ -166,11 +166,11 @@ contract CapTableData is EIP712 {
     function viewEmployeeName(
         bytes32 key
     ) external view returns (string memory) {
-        IEncryptedCapTable.EmployeeDetails memory employe = getEmployee(
+        IEncryptedCapTable.EmployeeDetails memory employee = getEmployee(
             key,
             msg.sender
         );
-        string memory details = employe.name;
+        string memory details = employee.name;
         return details;
     }
 
@@ -186,11 +186,11 @@ contract CapTableData is EIP712 {
         onlySignedPublicKeyEmp(publicKey, signature, key, caller)
         returns (bytes memory)
     {
-        IEncryptedCapTable.EmployeeDetails memory employe = getEmployee(
+        IEncryptedCapTable.EmployeeDetails memory employee = getEmployee(
             key,
             caller
         );
-        bytes memory details = TFHE.reencrypt(employe.claimed, publicKey, 0);
+        bytes memory details = TFHE.reencrypt(employee.claimed, publicKey, 0);
         return details;
     }
 
@@ -206,11 +206,11 @@ contract CapTableData is EIP712 {
         onlySignedPublicKeyEmp(publicKey, signature, key, caller)
         returns (bytes memory)
     {
-        IEncryptedCapTable.EmployeeDetails memory employe = getEmployee(
+        IEncryptedCapTable.EmployeeDetails memory employee = getEmployee(
             key,
             caller
         );
-        bytes memory details = TFHE.reencrypt(employe.unlocked, publicKey, 0);
+        bytes memory details = TFHE.reencrypt(employee.unlocked, publicKey, 0);
         return details;
     }
 
