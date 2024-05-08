@@ -116,7 +116,7 @@ contract CapTableData is EIP712 {
     }
 
     // Function to view encrypted employee total allocation data
-    function viewEmployeTotalAllocation(
+    function viewEmployeeTotalAllocation(
         bytes32 key,
         bytes32 publicKey,
         bytes calldata signature,
@@ -140,7 +140,7 @@ contract CapTableData is EIP712 {
     }
 
     // Function to view encrypted employee last claimed data
-    function viewEmployeLastClaimed(
+    function viewEmployeeLastClaimed(
         bytes32 key,
         bytes32 publicKey,
         bytes calldata signature,
@@ -163,7 +163,7 @@ contract CapTableData is EIP712 {
         return details;
     }
 
-    function viewEmployeName(
+    function viewEmployeeName(
         bytes32 key
     ) external view returns (string memory) {
         IEncryptedCapTable.EmployeeDetails memory employe = getEmployee(
@@ -175,7 +175,7 @@ contract CapTableData is EIP712 {
     }
 
     // Function to view encrypted employee claimed data
-    function viewEmployeClaimed(
+    function viewEmployeeClaimed(
         bytes32 key,
         bytes32 publicKey,
         bytes calldata signature,
@@ -195,7 +195,7 @@ contract CapTableData is EIP712 {
     }
 
     // Function to view encrypted employee unlocked data
-    function viewEmployeUnlocked(
+    function viewEmployeeUnlocked(
         bytes32 key,
         bytes32 publicKey,
         bytes calldata signature,
