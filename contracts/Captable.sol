@@ -21,8 +21,8 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
 
     /// @dev company: Mapping to store company details keyed by a unique identifier
     mapping(bytes32 => CompanyDetails) public company;
-    /// @dev isEmpoloyee:Mapping to check if an address is an employee of a specific company
-    mapping(bytes32 => mapping(address => bool)) public isEmpoloyee;
+    /// @dev isEmployee:Mapping to check if an address is an employee of a specific company
+    mapping(bytes32 => mapping(address => bool)) public isEmployee;
     /// @dev employDetailsv :Mapping to store employee details keyed by company and address
     mapping(bytes32 => mapping(address => EmployeeDetails))
         public employDetails;
@@ -97,7 +97,7 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
     ) external {
         CompanyDetails memory com = company[_key];
         require(msg.sender == com.admin, "caller is not admin");
-        isEmpoloyee[_key][_address] = true;
+        isEmployee[_key][_address] = true;
         com.employs = TFHE.add(com.employs, TFHE.asEuint32(1));
         company[_key] = com;
 
@@ -166,7 +166,7 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
         VestingSchedule memory vest = schedule[key];
         EmployeeDetails memory employ = employDetails[key][msg.sender];
         CompanyDetails memory com = company[key];
-        require(isEmpoloyee[key][msg.sender], "not a employee");
+        require(isEmployee[key][msg.sender], "not a employee");
 
         uint32 timestamp = uint32(block.timestamp % 2 ** 32);
         euint32 eTimeStamp = TFHE.asEuint32(timestamp);
