@@ -66,28 +66,6 @@ contract Vesting is IVesting {
         IEncryptedCapTable(capTable).addSchedule(schedule, _key);
     }
 
-    function addVestingPercentage(
-        bytes32 _key,
-        VestingParam2 calldata params
-    ) external onlyAdmin(_key) {
-        IEncryptedCapTable(capTable).addPercentages(
-            TFHE.asEuint32(params.EreleaseAtStartPercentage),
-            TFHE.asEuint32(params.EreleaseAtCliffPercentage),
-            TFHE.asEuint32(params.ElinearReleasePercentage),
-            _key
-        );
-    }
-
-    function addTotalVestingAmount(
-        bytes32 _key,
-        bytes memory totalAmount
-    ) external onlyAdmin(_key) {
-        IEncryptedCapTable(capTable).addTotalVestedAmount(
-            TFHE.asEuint32(totalAmount),
-            _key
-        );
-    }
-
     modifier onlyAdmin(bytes32 key) {
         IEncryptedCapTable.CompanyDetails memory com = getCompany(key);
 

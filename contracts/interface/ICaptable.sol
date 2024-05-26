@@ -45,21 +45,17 @@ interface IEncryptedCapTable is IVesting {
     function addEmploy(
         string memory _name,
         address _address,
-        bytes32 _key
+        bytes32 _key,
+        bytes calldata _eAmount
     ) external;
-    function addAllocation(
-        address _address,
-        bytes calldata _Eamount,
-        bytes32 _key
-    ) external;
-    function addSchedule(VestingSchedule memory vesting, bytes32 _key) external;
-    function request(bytes32 key) external returns (euint32);
+
+    function request(bytes32 key) external;
     function claim(bytes calldata _amount, bytes32 _key) external;
-    function claimableAmount(bytes32 key) external view returns (euint32);
-    function claimAmount(bytes32 key) external view returns (euint32);
+    //function claimableAmount(bytes32 key) external view returns (euint32);
     function getcompany(
         bytes32 key
     ) external view returns (CompanyDetails memory);
+    function addSchedule(VestingSchedule memory vesting, bytes32 _key) external;
 
     function getemployee(
         bytes32 key,

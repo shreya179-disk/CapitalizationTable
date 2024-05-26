@@ -8,7 +8,7 @@ import "fhevm/lib/TFHE.sol";
 import {EncryptedERC20} from "contracts/EncryptedERC20.sol";
 import {IEncryptedCapTable} from "contracts/interface/ICaptable.sol";
 import {IVesting} from "contracts/interface/IVesting.sol";
-
+import {IEncryptedERC20} from "contracts/IERC20.sol";
 ///@title EncryptedCapTable : This contract allows companies to created there token distribution and manage employ holding
 /// with the coustimized Vesting period
 ///  :  Company owner is represed as admin
@@ -16,13 +16,11 @@ import {IVesting} from "contracts/interface/IVesting.sol";
 /// : Contract allows you to create company (a key which is uniquire to the company).
 ///  : Add employee and allocate funds and create Vesting plans
 
-contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
-    uint256 constant SECONDS_IN_DAY = 86400;
-
+contract EncryptedCapTable is IEncryptedCapTable, EIP712WithModifier {
     /// @dev company: Mapping to store company details keyed by a unique identifier
     mapping(bytes32 => CompanyDetails) public company;
-    /// @dev isEmployee:Mapping to check if an address is an employee of a specific company
-    mapping(bytes32 => mapping(address => bool)) public isEmployee;
+    /// @dev isEmpoloyee:Mapping to check if an address is an employee of a specific company
+    mapping(bytes32 => mapping(address => bool)) public isEmpoloyee;
     /// @dev employDetailsv :Mapping to store employee details keyed by company and address
     mapping(bytes32 => mapping(address => EmployeeDetails))
         public employDetails;
@@ -63,8 +61,8 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
     function getEmployeeList(
         bytes32 _key,
         uint256 _index
-    ) external view returns (address[] memory) {
-        stakeHolders[_key];
+    ) external view returns (address) {
+        return stakeHolders[_key][_index];
     }
 
     // Function to create a unique key for a company and deploy an ERC20 token contract
@@ -78,12 +76,24 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
         // EncryptedERC20 token = new EncryptedERC20(tokenName);
         bytes32 key = keccak256(abi.encodePacked(_string, _registeryear));
         CompanyDetails memory com = company[key];
-        require(com.admin == address(0), "comapny already exist");
+        require(com.admin == address(0), "company already exist");
         com.admin = msg.sender;
         company[key] = com;
         keys[msg.sender] = key;
         emit NewKey(key);
+
         return (key);
+    }
+
+    function createToken(
+        string memory tokenName,
+        bytes32 key
+    ) external returns (bool) {
+        EncryptedERC20 token = new EncryptedERC20(tokenName);
+        CompanyDetails memory com = company[key];
+        com.ercAddres = address(token);
+        company[key] = com;
+        return true;
     }
 
     /// This Function is use to add employee to the company.;
@@ -93,49 +103,30 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
     function addEmploy(
         string memory _name,
         address _address,
-        bytes32 _key
+        bytes32 _key,
+        bytes calldata _eAmount
     ) external {
         CompanyDetails memory com = company[_key];
         require(msg.sender == com.admin, "caller is not admin");
-        isEmployee[_key][_address] = true;
+        isEmpoloyee[_key][_address] = true;
         com.employs = TFHE.add(com.employs, TFHE.asEuint32(1));
+        com.totalFund = TFHE.add(com.totalFund, TFHE.asEuint32(_eAmount));
         company[_key] = com;
 
         EmployeeDetails memory employ = employDetails[_key][_address];
+        employ.totalAllocation = TFHE.asEuint32(_eAmount);
         employ.stakeholder = _address;
         employ.name = _name;
         stakeHolders[_key].push(_address);
         employDetails[_key][_address] = employ;
     }
 
-    ///  :Function to add allocation/tokens to an employee
-    ///  Retrieve company details to increase employee numbers
-    ///  caller should be admin
-    ///  employ: Retrive Employe details from Struct EmployeeDetails
-    ///  com : Retrive CompanyDetails
-    function addAllocation(
-        address _address,
-        bytes calldata _eAmount,
-        bytes32 _key
-    ) external {
-        euint32 eamount = TFHE.asEuint32(_eAmount);
-        CompanyDetails memory com = company[_key];
-        require(msg.sender == com.admin, "not a valid admin");
-        EmployeeDetails memory employ = employDetails[_key][_address];
-        employ.totalAllocation = TFHE.add(eamount, employ.totalAllocation);
-        com.totalFund = TFHE.add(com.totalFund, eamount);
-        employ.allocationTime = uint32(block.timestamp % 2 ** 32);
-        employDetails[_key][_address] = employ;
-        company[_key] = com;
+    function addSchedule(VestingSchedule memory vesting, bytes32 _key) public {
+        schedule[_key] = vesting;
     }
 
     /// A dunction called by vesting contract to add Vesting Schedule:
     /// vesting is the Vesting structed defined in Vesting contract
-    /// @dev : schedule mapping is created from company key to VestingSchedule
-    function addSchedule(VestingSchedule memory vesting, bytes32 _key) public {
-        require(vestingAddr == msg.sender);
-        schedule[_key] = vesting;
-    }
 
     ///  employee requests to unlock tokens according to timestamp
     ///  Input key is the key of the company and caller should be the employe of company
@@ -162,22 +153,22 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
     /// unlockAmt : If cliff duration is greater than time elapsed. then valueBeforeCliff is chossen else valueAfterCliff.
     /// this amount is added to unlock tokens on employ
     /// this value is subtracted from total lock tokens of company
-    function request(bytes32 key) external returns (euint32) {
+    function request(bytes32 key) external {
         VestingSchedule memory vest = schedule[key];
         EmployeeDetails memory employ = employDetails[key][msg.sender];
         CompanyDetails memory com = company[key];
-        require(isEmployee[key][msg.sender], "not a employee");
+        require(isEmpoloyee[key][msg.sender], "not a employee");
 
-        uint32 timestamp = uint32(block.timestamp % 2 ** 32);
+        uint32 timestamp = uint32(block.timestamp);
         euint32 eTimeStamp = TFHE.asEuint32(timestamp);
         euint32 cliffTime = TFHE.add(vest.start, vest.cliffDuration);
 
         euint32 eTimeElapsed = TFHE.cmux(
             TFHE.ge(eTimeStamp, vest.start),
-            TFHE.sub(timestamp, vest.start),
+            TFHE.sub(eTimeStamp, vest.start),
             TFHE.asEuint32(0)
         );
-        euint32 eCliffStartTimeDiff = TFHE.sub(cliffTime, vest.start);
+        euint32 eCliffStartTimeDiff = vest.cliffDuration;
 
         euint32 unLockeBeforeCliff = valueBeforeCliff(
             vest,
@@ -201,15 +192,14 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
             unLockAfterCliff
         );
 
-        employ.unlocked = TFHE.add(employ.unlocked, unlockAmt);
+        employ.unlocked = TFHE.asEuint32(100);
         com.totalLocked = TFHE.sub(com.totalLocked, unlockAmt);
 
         employDetails[key][msg.sender] = employ;
-        company[key] = com;
-        return unlockAmt;
+        // company[key] = com;
     }
 
-    // amount unlocked after cliff.
+    //amount unlocked after cliff.
     function valueAfterCliff(
         EmployeeDetails memory employ,
         VestingSchedule memory vest,
@@ -217,7 +207,7 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
         euint32 eCliffStartTimeDiff,
         euint32 eTimeStamp,
         euint32 cliffTime
-    ) internal returns (euint32) {
+    ) internal view returns (euint32) {
         // unlock at the start
         euint32 unlockAtStart = valueBeforeCliff(
             vest,
@@ -229,25 +219,25 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
         // unlocked at the cliff
         euint32 unlockatCliff = valueAtCliff(vest, employ, cliffTime);
 
-        /// check if previously tokens were claimed
-        /// if yes then time diff will be time stamp - Last claimed time
-        /// if no then cliff time is the initial time
+        // check if previously tokens were claimed
+        //if yes then time diff will be time stamp - Last claimed time
+        //if no then cliff time is the initial time
         euint32 lastTime = TFHE.cmux(
             TFHE.ge(employ.lastClaimed, cliffTime),
             employ.lastClaimed,
             cliffTime
         );
-        /// the time diff calculation
+        // the time diff calculation
         euint32 timeFromCliff = TFHE.cmux(
             TFHE.ge(eTimeStamp, lastTime),
             TFHE.sub(eTimeStamp, lastTime),
             TFHE.asEuint32(0)
         );
 
-        /// unlock amount after cliff
-        euint32 unlockAfterCliff = TFHE.div(
+        // unlock amount after cliff
+        euint32 unlockAfterCliff = TFHE.mul(
             TFHE.mul(timeFromCliff, employ.totalAllocation),
-            percent
+            vest.linearReleasePercentage
         );
 
         /// total unlock
@@ -256,18 +246,18 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
             TFHE.add(unlockAtStart, unlockatCliff)
         );
 
-        return totalUnlock;
+        return unlockatCliff;
     }
 
-    /// number of tokens getting unlock at cliff.
-    /// this function is an iteranl functiom and only be called when current time stamp is greater than cliff time stamp
-    /// we check if last claimed is greater than cliff time.
-    /// if yes then the amount that get unlocked at cliff is already claimed
+    // number of tokens getting unlock at cliff.
+    //this function is an iteranl functiom and only be called when current time stamp is greater than cliff time stamp
+    // we check if last claimed is greater than cliff time.
+    // if yes then the amount that get unlocked at cliff is already claimed
     function valueAtCliff(
         VestingSchedule memory vest,
         EmployeeDetails memory employ,
         euint32 cliffTime
-    ) internal returns (euint32) {
+    ) public view returns (euint32) {
         euint32 unlockAtCliff = TFHE.div(
             TFHE.mul(vest.releaseAtCliffPercentage, employ.totalAllocation),
             percent
@@ -289,7 +279,7 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
         euint32 cliffTime,
         euint32 eTimeElapsed,
         EmployeeDetails memory employ
-    ) internal returns (euint32) {
+    ) internal view returns (euint32) {
         euint32 unlockAtStart = TFHE.div(
             TFHE.mul(vest.releaseAtStartPercentage, employ.totalAllocation),
             percent
@@ -306,29 +296,18 @@ contract EncryptedCapTable is IVesting, IEncryptedCapTable, EIP712WithModifier {
     function claim(bytes calldata _amount, bytes32 _key) external {
         // is unlock > 0 then we claim and transfer funds to sender
         euint32 eamount = TFHE.asEuint32(_amount);
-        euint32 claimable = claimableAmount(_key);
         EmployeeDetails memory employ = employDetails[_key][msg.sender];
+        euint32 claimable = employ.unlocked;
         CompanyDetails memory com = company[_key];
         employ.claimed = TFHE.add(employ.claimed, eamount);
-        employ.lastClaimed = TFHE.asEuint32(uint32(block.timestamp % 2 ** 32));
-        com.totalClaimedFund = TFHE.add(com.totalClaimedFund, eamount);
+        //employ.lastClaimed = TFHE.asEuint32(uint32(block.timestamp));
+        //com.totalClaimedFund = TFHE.add(com.totalClaimedFund, eamount);
 
         TFHE.optReq(TFHE.ge(claimable, eamount));
         TFHE.optReq(TFHE.ge(employ.totalAllocation, employ.claimed));
+        IEncryptedERC20(com.ercAddres).mint(_amount);
 
         employDetails[_key][msg.sender] = employ;
         company[_key] = com;
-    }
-
-    /// a view function representing claimable amonunt
-    function claimableAmount(bytes32 key) public view returns (euint32) {
-        EmployeeDetails memory employ = employDetails[key][msg.sender];
-        return employ.unlocked;
-    }
-
-    /// a view function representing already claimed amount
-    function claimAmount(bytes32 key) public view returns (euint32) {
-        EmployeeDetails memory employ = employDetails[key][msg.sender];
-        return employ.claimed;
     }
 }

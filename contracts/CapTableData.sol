@@ -12,6 +12,7 @@ import {IEncryptedCapTable} from "contracts/interface/ICaptable.sol";
 import {IVesting} from "contracts/interface/IVesting.sol";
 
 // Contract to manage encrypted cap table data
+
 contract CapTableData is EIP712 {
     IEncryptedCapTable captable;
 
@@ -116,7 +117,7 @@ contract CapTableData is EIP712 {
     }
 
     // Function to view encrypted employee total allocation data
-    function viewEmployeeTotalAllocation(
+    function viewEmployeTotalAllocation(
         bytes32 key,
         bytes32 publicKey,
         bytes calldata signature,
@@ -127,12 +128,12 @@ contract CapTableData is EIP712 {
         onlySignedPublicKeyEmp(publicKey, signature, key, caller)
         returns (bytes memory)
     {
-        IEncryptedCapTable.EmployeeDetails memory employee = getEmployee(
+        IEncryptedCapTable.EmployeeDetails memory employe = getEmployee(
             key,
             caller
         );
         bytes memory details = TFHE.reencrypt(
-            employee.totalAllocation,
+            employe.totalAllocation,
             publicKey,
             0
         );
@@ -140,7 +141,7 @@ contract CapTableData is EIP712 {
     }
 
     // Function to view encrypted employee last claimed data
-    function viewEmployeeLastClaimed(
+    function viewEmployeLastClaimed(
         bytes32 key,
         bytes32 publicKey,
         bytes calldata signature,
@@ -151,31 +152,31 @@ contract CapTableData is EIP712 {
         onlySignedPublicKeyEmp(publicKey, signature, key, caller)
         returns (bytes memory)
     {
-        IEncryptedCapTable.EmployeeDetails memory employee = getEmployee(
+        IEncryptedCapTable.EmployeeDetails memory employe = getEmployee(
             key,
             caller
         );
         bytes memory details = TFHE.reencrypt(
-            employee.lastClaimed,
+            employe.lastClaimed,
             publicKey,
             0
         );
         return details;
     }
 
-    function viewEmployeeName(
+    function viewEmployeName(
         bytes32 key
     ) external view returns (string memory) {
-        IEncryptedCapTable.EmployeeDetails memory employee = getEmployee(
+        IEncryptedCapTable.EmployeeDetails memory employe = getEmployee(
             key,
             msg.sender
         );
-        string memory details = employee.name;
+        string memory details = employe.name;
         return details;
     }
 
     // Function to view encrypted employee claimed data
-    function viewEmployeeClaimed(
+    function viewEmployeClaimed(
         bytes32 key,
         bytes32 publicKey,
         bytes calldata signature,
@@ -186,16 +187,16 @@ contract CapTableData is EIP712 {
         onlySignedPublicKeyEmp(publicKey, signature, key, caller)
         returns (bytes memory)
     {
-        IEncryptedCapTable.EmployeeDetails memory employee = getEmployee(
+        IEncryptedCapTable.EmployeeDetails memory employe = getEmployee(
             key,
             caller
         );
-        bytes memory details = TFHE.reencrypt(employee.claimed, publicKey, 0);
+        bytes memory details = TFHE.reencrypt(employe.claimed, publicKey, 0);
         return details;
     }
 
     // Function to view encrypted employee unlocked data
-    function viewEmployeeUnlocked(
+    function viewEmployeUnlocked(
         bytes32 key,
         bytes32 publicKey,
         bytes calldata signature,
@@ -206,11 +207,11 @@ contract CapTableData is EIP712 {
         onlySignedPublicKeyEmp(publicKey, signature, key, caller)
         returns (bytes memory)
     {
-        IEncryptedCapTable.EmployeeDetails memory employee = getEmployee(
+        IEncryptedCapTable.EmployeeDetails memory employe = getEmployee(
             key,
             caller
         );
-        bytes memory details = TFHE.reencrypt(employee.unlocked, publicKey, 0);
+        bytes memory details = TFHE.reencrypt(employe.unlocked, publicKey, 0);
         return details;
     }
 
